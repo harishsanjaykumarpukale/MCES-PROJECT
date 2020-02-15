@@ -1,124 +1,64 @@
 #include <LPC214X.H>
-#include <stdio.h>
-#include <string.h>
+#define LED_OFF (IO0SET=1U<<31)
+#define LED_ON (IO0CLR=1U<<31)
+
 void delay(unsigned int j);
-#define PLOCK 0X00000400
+void systeminit(void);
+unsigned char get(unsigned char alpha);
+void seg(char*buf);
+void seg1(char*buf);
+void dispInt(long int);
+void dispFloat(float);
+unsigned int adc(int,int);
+int main()
+{
+//	float f1=935.33;
+	IO0DIR|=1U<<31|1U<<19|1U<<20|1U<<30;
+	LED_ON;
+	systeminit();
+	 while(1){
+unsigned int n=adc(1,4);
+		 float n1= 5*n*100/1024;
+		float n2=(n1-32)/1.8;
+	dispFloat(n2);
+		 delay(500);
+	 }
+	while(1)
+	{
 		
-char buf[6];
-		
-unsigned char dot()
-{
-	
-	switch(buf[4])
-	{
-		case '0': return 0x7f;
-		case '1': return 0x06;
-		case '2': return 0x24;
-		case '3': return 0x30;
-		case '4': return 0x19;
-		case '5': return 0x12;
-		case '6': return 0x02;
-		case '7': return 0x78;
-		case '8': return 0x00;
-		case '9': return 0x10;
-	}
-	return 0xff;
-}	
-	
-unsigned char get(unsigned char alpha)
-{
-	switch(alpha)
-	{
-		case '0': return 0xc0;
-		case '1': return 0xf9;
-		case '2': return 0xa4;
-		case '3': return 0xb0;
-		case '4': return 0x99;
-		case '5': return 0x92;
-		case '6': return 0x82;
-		case '7': return 0xf8;
-		case '8': return 0x80;
-		case '9': return 0x90;
-		case 'f': return 0x8e;
-		case 'i': return 0xf9;
-		case 'r': return 0xce;
-		case 'e': return 0x86;
-		case 'h': return 0x89;
-		case 'l': return 0xc7;
-		case 'p': return 0x8c;
-		case ' ': return 0xff;
-		case '.': return 0x7f;
-		default:break;
-	}
-	return 0xff;
-}
-void seg(char *buf)
-{
-	unsigned char i,j;
-	unsigned char segment,temp=0;
-	
-	for(i=0;i<5;i++)
-	{
-		segment=get(*(buf+i));
-		for(j=0;j<8;j++)
-		{
-			temp=segment &0x80;
-			if(temp==0x80)
-				IOSET0|=1<<19;
-			else
-				IOCLR0|=1<<19;
-			
-			IOSET0|=1<<20;
-			delay(1);
-			IOCLR0|=1<<20;
-			segment=segment<<1;
-		}
-	}
-			IOSET0|=1<<30;
-			delay(1);
-			IOCLR0|=1<<30;
-			return;
-		}
-
-void dispInt(long int num)
-{
-	char buf[6];
-	sprintf(buf,"%05lu",num);
-	seg(&buf[0]);
-	delay(500);
-}
-void dispFloat(float num)
-{
-	sprintf(buf,"%05.2f",num);
-	seg(&buf[0]);
-	delay(500);
-}
-
-void systeminit(void)
-{
-	PLL0CON=0X01;
-	PLL0CFG=0X24;
-	PLL0FEED=0XAA;
-	PLL0FEED=0X55;
-	while(!(PLL0STAT & PLOCK))
-	{;}
-		PLL0CON=0X03;
-	PLL0FEED=0XAA;
-	PLL0FEED=0X55;
-	VPBDIV=0X01;
-	}
-void delay(unsigned int j)
-{
-	unsigned int x,i;
-	for(i=0;i<j;i++)
-	{
-	for(x=0;x<10000;x++);
+		seg("fire");
+		delay(500);
+		dispInt(33);
+		delay(500);
+		dispFloat(935.33);
+		delay(500);
+		seg("help");
+		delay(500);
 	}
 }
 
-		
-			
-			
-	
-
-
+unsigned int adc(int no,int ch)
+{
+ // adc(1,4) for temp sensor LM34, digital value will increase as temp increases
+ //adc(1,3) for LDR - digival value will reduce as the light increases
+ //adc(1,2) for trimpot - digital value changes as the pot rotation
+unsigned int val;
+PINSEL0 |= 0x0F300000; /* Select the P0_13 AD1.4 for ADC function */
+ /* Select the P0_12 AD1.3 for ADC function */
+ /* Select the P0_10 AD1.2 for ADC function */
+ switch (no) //select adc
+ {
+ case 0: AD0CR=0x00200600|(1<<ch); //select channel
+ AD0CR|=(1<<24); //start conversion
+ while((AD0GDR& (1U<<31))==0);
+ val=AD0GDR;
+ break;
+ case 1: AD1CR=0x00200600|(1<<ch); //select channel
+ AD1CR|=(1<<24); //start conversion
+ while((AD1GDR&(1U<<31))==0);
+ val=AD1GDR;
+ break;
+ }
+ val=(val >> 6) & 0x03FF; // bit 6:15 is 10 bit AD value
+ return val;
+}
